@@ -1,0 +1,23 @@
+This is bomb 2021201746.
+"maduiersnfotvbylSo you think you can stop the bomb with ctrl-c, do you?"
+flames
+It belongs to 2021201746 (2021201746@ruc.edu.cn)
+b explode_bomb
+set $num=*(int*)$arg0
+set $idx=*(int*)(0x4+$arg0)
+set $next=*(int**)(0x8+$arg0)
+if($next!=0)
+    plink($next)
+    end
+    end
+0x555555564360
+b phase_2
+0x10360 <node1>:        262     1       66416   0
+0x10370 <node2>:        554     2       66432   0
+0x10380 <node3>:        585     3       66448   0
+0x10390 <node4>:        358     4       66464   0
+0x2793 <node5>:         401     5       31392   0
+0x7aa0 <node6>:         126     6       0       0
+---Type <return> to continue, or q <return> to quit---r
+define  add    print $arg0 + $arg1end
+//6 1 4 5 2 3 

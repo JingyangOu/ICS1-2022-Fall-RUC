@@ -1,0 +1,250 @@
+softDouble.cpp
+--- buggy/softDouble.cpp	2022-10-07 03:44:31.000000000 -0400
++++ fixed/softDouble.cpp	2022-10-21 04:54:31.511971077 -0400
+@@ -5,6 +5,7 @@ const int BUFFER_LEN = 100010;
+ const uint64_t INF = 0x7FF0000000000000;
+ const uint64_t NaN = 0x7FF00000001F1E33;
+ const uint64_t NINF = 0xFFF0000000000000;
++const uint64_t one_u64=1ULL;
+ 
+ uint64_t read_from_string(char*);
+ char* write_to_string(uint64_t);
+@@ -122,15 +123,15 @@ int main(){ // Function: Parse & Evaluat
+ }
+ 
+ inline bool isNaN(uint64_t x){
+-    return (Exp(x) == (1 << 11) - 1) && (Fraction(x) & ((1 << 52) - 1)) != 0;
++    return (Exp(x) == (1 << 11) - 1) && (Fraction(x) & ((one_u64 << 52) - 1)) != 0;
+ }
+ 
+ inline bool isINF(uint64_t x){
+-    return (Exp(x) == (1 << 11) - 1) && (Fraction(x) & ((1 << 52) - 1)) == 0;
++    return (Exp(x) == (1 << 11) - 1) && (Fraction(x) & ((one_u64 << 52) - 1)) == 0;
+ }
+ 
+ inline bool isZero(uint64_t x){
+-    return (x & ((1 << 63) - 1)) == 0;
++    return (x & ((one_u64 << 63) - 1)) == 0;
+ }
+ 
+ uint64_t add(uint64_t lhs, uint64_t rhs){
+@@ -163,7 +164,7 @@ uint64_t add(uint64_t lhs, uint64_t rhs)
+     uint64_t ansf = Fraction(lhs) << 1;
+ 
+     while(rhsf != 0){
+-        uint64_t cur = LowBit(rhsf) >> ediff;
++        uint64_t cur =ediff < 64? (LowBit(rhsf) >> ediff):0;
+         if(cur == 0)
+             roundup = true;
+         else
+@@ -172,7 +173,7 @@ uint64_t add(uint64_t lhs, uint64_t rhs)
+     }
+ 
+     // Adjust EXP
+-    while(ansf >= (1 << 54)){
++    while(ansf >= (one_u64 << 54)){
+         roundup = roundup || (ansf & 1) != 0;
+         ansf >>= 1;
+         ++ansexp;
+@@ -180,34 +181,34 @@ uint64_t add(uint64_t lhs, uint64_t rhs)
+     if(ansexp == 0){ // subnormalized
+         assert((ansf & 1) == 0);
+         ansf >>= 1;
+-        assert(ansexp < (1 << 53));
++        assert(ansexp < (one_u64 << 53));
+     }
+     // Rounding
+     if((ansf & 1) == 0)
+         ansf >>= 1;
+     else{
+         ansf >>= 1;
+-        if(roundup)
++        if(roundup|| (ansf & 3 ==3))
+             ++ansf;
+     }
+     // NOTE: only 011111 -> 100000, no more rounding required
+-    if(ansf >= (1 << 53)){
++    if(ansf >= (one_u64 << 53)){
+         assert(ansexp != 0);
+         assert((ansf & 1) == 0);
+         ansf >>= 1;
+         ++ansexp;
+     }
+-    if(ansexp == 0 && ansf >= (1 << 52))
++    if(ansexp == 0 && ansf >= (one_u64 << 52))
+         ++ansexp;
+ 
+-    assert((ansexp != 0 && ansf < (1 << 53)) || (ansexp == 0 && ansf < (1 << 52)));
++    assert((ansexp != 0 && ansf < (one_u64 << 53)) || (ansexp == 0 && ansf < (one_u64 << 52)));
+ 
+     if(ansexp >= ((1 << 11) - 1)) // overflow
+         ans = INF;
+     else
+-        ans = ansexp << 52 | (ansf & ((1 << 52) - 1));
++        ans = ansexp << 52 | (ansf & ((one_u64 << 52) - 1));
+ 
+-    ans |= (1 << 63) & lhs; // Add sign
++    ans |= (one_u64 << 63) & lhs; // Add sign
+     return ans;
+ }
+ 
+@@ -243,7 +244,7 @@ uint64_t subtract(uint64_t lhs, uint64_t
+     uint64_t rhsf = Fraction(rhs) << 2;
+ 
+     while(rhsf != 0){
+-        uint64_t cur = LowBit(rhsf) >> ediff;
++        uint64_t cur =ediff < 64? (LowBit(rhsf) >> ediff):0;
+         if(cur == 0)
+             roundup = true;
+         else
+@@ -252,7 +253,7 @@ uint64_t subtract(uint64_t lhs, uint64_t
+     }
+ 
+     // Adjust EXP
+-    while(ansexp > 0 && (ansf & (1 << 54)) == 0){
++    while(ansexp > 0 && (ansf & (one_u64 << 54)) == 0){
+         --ansexp;
+         ansf <<= 1;
+     }
+@@ -269,17 +270,17 @@ uint64_t subtract(uint64_t lhs, uint64_t
+             ++ansf;
+     }
+     // NOTE: only 011111 -> 100000, no more rounding required
+-    if(ansf >= (1 << 53)){
++    if(ansf >= (one_u64 << 53)){
+         if(ansexp > 0)
+             ansf >>= 1;
+         ++ansexp;
+     }
+-    if(ansexp == 0 && ansf >= (1 << 52))
++    if(ansexp == 0 && ansf >= (one_u64 << 52))
+         ++ansexp;
+ 
+-    ans = ansexp << 52 | (ansf & ((1 << 52) - 1));
++    ans = ansexp << 52 | (ansf & ((one_u64 << 52) - 1));
+ 
+-    ans |= lhs & (1 << 63); // Add sign
++    ans |= lhs & (one_u64 << 63); // Add sign
+     return negflag ? Negative(ans) : ans;
+ }
+ 
+@@ -298,12 +299,12 @@ uint64_t multiply(uint64_t lhs, uint64_t
+     intEx ansf = ((intEx)(Fraction(lhs)) * (intEx)(Fraction(rhs)));
+ 
+     // Adjusting exp
+-    while(ansexp < 0 || ansf >= (1 << 54)){
++    while(ansexp < 0 || ansf >= (one_u64 << 54)){
+         ++ansexp;
+         roundup |= ansf & 1;
+         ansf >>= 1;
+     }
+-    while(ansexp > 0 && (ansf & (1 << 53)) == 0){
++    while(ansexp > 0 && (ansf & (one_u64 << 53)) == 0){
+         --ansexp;
+         ansf <<= 1;
+     }
+@@ -327,7 +328,7 @@ uint64_t multiply(uint64_t lhs, uint64_t
+             ++ansf;
+     }
+ 
+-    if(ansf >= (1 << 53)){
++    if(ansf >= (one_u64 << 53)){
+         if(ansexp > 0)
+             ansf >>= 1;
+         ++ansexp;
+@@ -336,9 +337,9 @@ uint64_t multiply(uint64_t lhs, uint64_t
+     if(ansexp >= ((1 << 11) - 1)) // overflow
+         ans = INF;
+     else
+-        ans = ansexp << 52 | (ansf & ((1 << 52) - 1));
++        ans = ansexp << 52 | (ansf & ((one_u64 << 52) - 1));
+ 
+-    ans |= ((1 << 63) & lhs) ^ ((1 << 63) & rhs); // Add sign
++    ans |= ((one_u64 << 63) & lhs) ^ ((one_u64 << 63) & rhs); // Add sign
+     return ans;
+ }
+ 
+@@ -350,13 +351,13 @@ uint64_t divide(uint64_t lhs, uint64_t r
+         if(isZero(lhs))
+             return NaN;
+         else
+-            return INF;
++            return Sign(lhs) * Sign(rhs) > 0 ? INF : NINF;
+     }
+     if(isINF(rhs)){  // divided by INF
+         if(isINF(lhs))
+             return NaN;
+         else
+-            return ((1 << 63) & (lhs ^ rhs)); // signed zero
++            return ((one_u64 << 63) & (lhs ^ rhs)); // signed zero
+     }
+     if(isINF(lhs))
+         return INF; // INF/INF handled, other return INF
+@@ -370,12 +371,12 @@ uint64_t divide(uint64_t lhs, uint64_t r
+         roundup = true;
+ 
+     // Adjusting exp
+-    while(ansexp < 0 || ansf >= (1 << 55)){
++    while(ansexp < 0 || ansf >= (one_u64 << 55)){
+         ++ansexp;
+         roundup |= ansf & 1;
+         ansf >>= 1;
+     }
+-    while(ansexp > 0 && (ansf & (1 << 54)) == 0){
++    while(ansexp > 0 && (ansf & (one_u64 << 54)) == 0){
+         --ansexp;
+         ansf <<= 1;
+     }
+@@ -401,7 +402,7 @@ uint64_t divide(uint64_t lhs, uint64_t r
+             ++ansf;
+     }
+ 
+-    if(ansf >= (1 << 53)){
++    if(ansf >= (one_u64 << 53)){
+         if(ansexp > 0)
+             ansf >>= 1;
+         ++ansexp;
+@@ -410,9 +411,9 @@ uint64_t divide(uint64_t lhs, uint64_t r
+     if(ansexp >= ((1 << 11) - 1)) // overflow
+         ans = INF;
+     else
+-        ans = ansexp << 52 | (ansf & ((1 << 52) - 1));
++        ans = ansexp << 52 | (ansf & ((one_u64 << 52) - 1));
+ 
+-    ans |= ((1 << 63) & lhs) ^ ((1 << 63) & rhs); // Add sign
++    ans |= ((one_u64 << 63) & lhs) ^ ((one_u64 << 63) & rhs); // Add sign
+     return ans;
+ }
+ 
+@@ -464,8 +465,10 @@ char* write_to_string(uint64_t x){
+     char* ans = (char*)malloc(BUFFER_LEN * sizeof(char));
+     if(isNaN(x))
+         strcpy(ans, "nan");
+-    else if(isINF(x))
+-        strcpy(ans, "inf");
++    else if(isINF(x)&&Sign(x) == 1)
++        strcpy(ans, "inf");//-,-0
++    else if (isINF(x) && Sign(x) == -1)
++        strcpy(ans, "-inf");
+     else
+         sprintf(ans, "%.1200f", _mm_cvtsi64_si128(x));
+     return ans;
+@@ -476,7 +479,7 @@ inline uint64_t LowBit(uint64_t x){
+ }
+ 
+ inline uint64_t Negative(uint64_t x){
+-    return isNaN(x)? x : (x ^ (1 << 63));
++    return isNaN(x)? x : (x ^ (one_u64 << 63));
+ }
+ 
+ inline int64_t Exp(uint64_t x){
+@@ -489,7 +492,7 @@ inline int Sign(uint64_t x){
+ 
+ inline uint64_t Fraction(uint64_t x){
+     if(Exp(x) != 0)
+-        return 1 << 52 | (x & ((1 << 52) - 1));
++        return one_u64 << 52 | (x & ((one_u64 << 52) - 1));
+     else
+-        return (x & ((1 << 52) - 1)) << 1; // normalize subnormal
++        return (x & ((one_u64 << 52) - 1)) << 1; // normalize subnormal
+ }

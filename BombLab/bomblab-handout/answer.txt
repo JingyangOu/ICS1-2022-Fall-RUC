@@ -1,0 +1,10 @@
+The autumn leaves, the summer breeze, your shiny hair like mahogany.
+2 8 32 128 512 2048
+5 -230
+4 29 Testify
+J02168
+6 1 4 5 2 3 
+hakurei
+b explode_bomb
+0x7ae0
+b phase_6
